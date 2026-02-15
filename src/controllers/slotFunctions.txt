@@ -1,0 +1,94 @@
+
+// --- School Slots Management ---
+
+// Helper function to initialize default slots for a school
+export const initializeDefaultSlots = async (schoolId: number) => {
+    const defaultSlots = [
+        { slotName: 'Morning', startTime: '09:00', endTime: '12:00', capacity: 10 },
+        { slotName: 'Afternoon', startTime: '12:00', endTime: '15:00', capacity: 10 },
+        { slotName: 'Evening', startTime: '15:00', endTime: '18:00', capacity: 10 },
+        { slotName: 'Night', startTime: '18:00', endTime: '21:00', capacity: 10 },
+    ];
+
+    for (const slot of defaultSlots) {
+        await SchoolSlot.create({
+            schoolId,
+            ...slot,
+            isActive: true,
+        });
+    }
+};
+
+export const getSchoolSlots = async (req: Request, res: Response) => {
+    try {
+        const { schoolId } = req.params;
+        const slots = await SchoolSlot.findAll({ 
+            where: { schoolId },
+            order: [['startTime', 'ASC']]
+        });
+        
+        if (slots.length === 0) {
+            await initializeDefaultSlots(Number(schoolId));
+            const newSlots = await SchoolSlot.findAll({ 
+                where: { schoolId },
+                order: [['startTime', 'ASC']]
+            });
+            return res.json(newSlots);
+        }
+        
+        res.json(slots);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const createSchoolSlot = async (req: Request, res: Response) => {
+    try {
+        const { schoolId } = req.params;
+        const { slotName, startTime, endTime, capacity, isActive } = req.body;
+        
+        const slot = await SchoolSlot.create({
+            schoolId: Number(schoolId),
+            slotName,
+            startTime,
+            endTime,
+            capacity: capacity || 10,
+            isActive: isActive !== undefined ? isActive : true,
+        });
+        
+        res.status(201).json(slot);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const updateSchoolSlot = async (req: Request, res: Response) => {
+    try {
+        const { slotId } = req.params;
+        const { slotName, startTime, endTime, capacity, isActive } = req.body;
+        
+        const updateData: any = {};
+        if (slotName !== undefined) updateData.slotName = slotName;
+        if (startTime !== undefined) updateData.startTime = startTime;
+        if (endTime !== undefined) updateData.endTime = endTime;
+        if (capacity !== undefined) updateData.capacity = capacity;
+        if (isActive !== undefined) updateData.isActive = isActive;
+        
+        await SchoolSlot.update(updateData, { where: { id: slotId } });
+        
+        const updatedSlot = await SchoolSlot.findByPk(slotId);
+        res.json(updatedSlot);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const deleteSchoolSlot = async (req: Request, res: Response) => {
+    try {
+        const { slotId } = req.params;
+        await SchoolSlot.destroy({ where: { id: slotId } });
+        res.json({ message: 'Slot deleted successfully' });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
