@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Child from '../models/Child';
 import SchoolSlot from '../models/SchoolSlot';
 import Review from '../models/Review';
+import SchoolSlotPrice from '../models/SchoolSlotPrice';
 
 export const createBooking = async (req: Request, res: Response) => {
     try {
@@ -82,36 +83,37 @@ export const createBooking = async (req: Request, res: Response) => {
             });
         }
 
-        // 3. Validate Slot (if provided) and Check for Double Booking
-        // 3. Validate Slot (if provided) and Check Availability
+        // 3. Validate Slot and Check Availability
+        let slotAmount = service.cost; // Default: base service cost
+
         if (slotId) {
             const slot = await SchoolSlot.findByPk(slotId);
             if (!slot) {
                 return res.status(404).json({ error: 'Selected slot not found' });
             }
 
-            // Check Capacity logic
-            // a. Check if there is an override for this date
-            const override = await import('../models/SlotOverride').then(m => m.default.findOne({
+            // ── Look up price from school_slot_prices ──────────────────────
+            // Priority: service-specific price > global slot price (serviceId IS NULL)
+            const slotPrice = await SchoolSlotPrice.findOne({
                 where: {
-                    slotId,
-                    date: date // date string or date object? The controller receives YYYY-MM-DD usually. Verify format. 
-                    // Actually req.body.date is passed to new Date(date).
-                    // We need the string "YYYY-MM-DD" for the override lookup if stored as string/dateonly.
-                    // The backend typically stores overrides with 'date'.
+                    schoolId,
+                    slotName: slot.slotName,
+                    serviceId,   // service-specific price first
                 }
-            }));
+            }) || await SchoolSlotPrice.findOne({
+                where: {
+                    schoolId,
+                    slotName: slot.slotName,
+                    serviceId: null, // global default for the slot
+                }
+            });
 
-            // Note: SlotOverride model import inside function to avoid circular deps if any, or just import at top.
-            // Using dynamic import or assuming global import. Let's stick to simple import at top if possible, 
-            // but for this tool I'll assume SlotOverride is imported or I'll add the import.
-            // Wait, I can't add imports easily with this block.
-            // I will assume SlotOverride is NOT imported in this file yet. 
+            if (slotPrice) {
+                slotAmount = Number(slotPrice.price);
+            }
+            // else: keep service.cost as fallback
 
-            // Let's use raw SQL or just rely on standard Sequelize count if I can import SlotOverride.
-            // I'll take a safe bet: The user wants me to fix the "Logic".
-
-            // Let's count existing bookings first.
+            // ── Capacity check ─────────────────────────────────────────────
             const bookingsCount = await Booking.count({
                 where: {
                     schoolId,
@@ -121,22 +123,7 @@ export const createBooking = async (req: Request, res: Response) => {
                 }
             });
 
-            // We need effective capacity. 
-            // Since I cannot easily add 'import SlotOverride' at the top without replacing the whole file,
-            // I will strictly check against `slot.capacity` for now, assuming overrides are less frequent 
-            // or acceptable to be missed in this specific fix, OR I'll try to use a direct query.
-            // However, to be correct, I SHOULD check override. 
-
-            // Let's assume standard capacity for now to strictly fix the "1 booking only" bug.
-            // If the user needs overrides, they already use `getSlotAvailability` which handles it.
-            // Ideally `createBooking` should act similarly.
-
-            // Actually, I can use the existing `req` imports if I replace the top. 
-            // But I am replacing lines 62-83.
-
             if (bookingsCount >= slot.capacity) {
-                // If we want to be perfect, we'd check overrides. But `slot.capacity` is better than 1.
-                // Let's try to include override check if possible.
                 return res.status(409).json({ error: 'Slot is fully booked.' });
             }
         }
@@ -144,13 +131,13 @@ export const createBooking = async (req: Request, res: Response) => {
         // 4. Generate Confirmation Number
         const confirmationNo = `BK-${Date.now()}-${uuidv4().substring(0, 4).toUpperCase()}`;
 
-        // 5. Create Booking
+        // 5. Create Booking with correct slot price
         const booking = await Booking.create({
             parentId: parent.id,
             schoolId,
             serviceId,
             childId: targetChildId,
-            amount: service.cost,
+            amount: slotAmount,   // ← from school_slot_prices (or service.cost fallback)
             date: bookingDate,
             status: 'booked',
             bookingIdStr: confirmationNo,
@@ -188,14 +175,53 @@ export const getMyBookings = async (req: Request, res: Response) => {
             include: [
                 { model: School, as: 'school', attributes: ['name', 'image1', 'city'] },
                 { model: Service, as: 'service', attributes: ['name', 'cost'] },
-                { model: SchoolSlot, as: 'slot', attributes: ['startTime', 'endTime', 'slotName'] },
+                {
+                    model: SchoolSlot,
+                    as: 'slot',
+                    attributes: ['startTime', 'endTime', 'slotName'],
+                },
                 { model: Review, as: 'review' }
             ],
             order: [['date', 'ASC']]
         });
 
-        console.log(`[DEBUG] getMyBookings: Returning ${bookings.length} bookings for parentId ${parent.id}`);
-        res.status(200).json(bookings);
+        // ── Enrich each booking with the correct slot price ─────────────────
+        // The `amount` stored on the booking IS the correct price (set at creation).
+        // But if old bookings were created before the slot-price fix, we re-resolve
+        // it here so the app always shows the right figure.
+        const enriched = await Promise.all(
+            bookings.map(async (b) => {
+                const raw = b.toJSON() as any;
+
+                if (b.slotId) {
+                    // Look up the slot price for this booking's service + slot
+                    const slot = (raw as any).slot;
+                    if (slot?.slotName) {
+                        const slotPrice = await SchoolSlotPrice.findOne({
+                            where: {
+                                schoolId: b.schoolId,
+                                slotName: slot.slotName,
+                                serviceId: b.serviceId,
+                            }
+                        }) || await SchoolSlotPrice.findOne({
+                            where: {
+                                schoolId: b.schoolId,
+                                slotName: slot.slotName,
+                                serviceId: null,
+                            }
+                        });
+
+                        if (slotPrice) {
+                            raw.amount = Number(slotPrice.price); // override with slot price
+                        }
+                    }
+                }
+                return raw;
+            })
+        );
+
+        console.log(`[DEBUG] getMyBookings: Returning ${enriched.length} bookings for parentId ${parent.id}`);
+        res.status(200).json(enriched);
     } catch (error) {
         console.error("Error fetching bookings:", error);
         res.status(500).json({ error: 'Failed to fetch bookings' });

@@ -34,7 +34,7 @@ export const getAllSchools = async (req: Request, res: Response) => {
         // Sequelize simple include where might filter the services, not the schools, or exclude schools without the service.
         // For simple MVP: Fetch all and filter, or use required: true
         if (serviceName) {
-            include[0].where = { name: serviceName };
+            include[0].where = { name: { [Op.iLike]: `%${serviceName}%` } };
             include[0].required = true; // Only return schools that have this service
         }
 
@@ -45,6 +45,7 @@ export const getAllSchools = async (req: Request, res: Response) => {
 
         res.json(schools);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -157,6 +158,7 @@ export const getSchoolStats = async (req: Request, res: Response) => {
             totalRevenue // Currency formatted in frontend
         });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -204,6 +206,7 @@ export const getSchoolBookings = async (req: Request, res: Response) => {
             currentPage: Number(page)
         });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -221,6 +224,7 @@ export const getBookingDetails = async (req: Request, res: Response) => {
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
         res.json(booking);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -249,6 +253,7 @@ export const getServices = async (req: Request, res: Response) => {
         });
         res.json(services);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -281,6 +286,7 @@ export const createService = async (req: Request, res: Response) => {
 
         res.status(201).json(serviceWithSlots);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -340,6 +346,7 @@ export const updateService = async (req: Request, res: Response) => {
 
         res.json({ message: 'Service updated' });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -350,6 +357,7 @@ export const deleteService = async (req: Request, res: Response) => {
         await Service.destroy({ where: { id } });
         res.json({ message: 'Service deleted' });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -362,6 +370,7 @@ export const getBlockedDates = async (req: Request, res: Response) => {
         const blocked = await SchoolSchedule.findAll({ where: { schoolId } });
         res.json(blocked);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -398,6 +407,7 @@ export const blockDate = async (req: Request, res: Response) => {
         const schedule = await SchoolSchedule.create({ schoolId, serviceId, blockedDate, reason });
         res.status(201).json(schedule);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -413,6 +423,7 @@ export const unblockDate = async (req: Request, res: Response) => {
 
         res.json({ message: 'Date unblocked successfully' });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -497,6 +508,7 @@ export const getRevenue = async (req: Request, res: Response) => {
 
         res.json(sortedData);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -517,6 +529,7 @@ export const getSchoolProfile = async (req: Request, res: Response) => {
 
         res.json(school);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -582,6 +595,7 @@ export const updateSchoolProfile = async (req: Request, res: Response) => {
 
         res.json({ message: 'School profile updated successfully', school });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -605,6 +619,7 @@ export const updateSchoolLocation = async (req: Request, res: Response) => {
 
         res.json({ message: 'School location updated successfully', school });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -620,6 +635,7 @@ export const uploadSchoolImage = async (req: Request, res: Response) => {
 
         res.json({ message: 'File uploaded successfully', url: fileUrl });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -707,6 +723,7 @@ export const getSchoolSlots = async (req: Request, res: Response) => {
 
         res.json(slots.map(attachPrice));
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -764,6 +781,7 @@ export const createSchoolSlot = async (req: Request, res: Response) => {
 
         res.status(201).json(slot);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -828,6 +846,7 @@ export const updateSchoolSlot = async (req: Request, res: Response) => {
         const updatedSlot = await SchoolSlot.findByPk(Number(slotId));
         res.json(updatedSlot);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -838,6 +857,7 @@ export const deleteSchoolSlot = async (req: Request, res: Response) => {
         await SchoolSlot.destroy({ where: { id: slotId } });
         res.json({ message: 'Slot deleted successfully' });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -855,12 +875,12 @@ export const getSlotAvailability = async (req: Request, res: Response) => {
         const targetDate = new Date(dateStr);
 
         // Check for blocked dates
-        const blockedSchedules = await SchoolSchedule.findAll({ where: { schoolId, blockedDate: dateStr } });
+        const blockedSchedules = await SchoolSchedule.findAll({ where: { schoolId: Number(schoolId), blockedDate: dateStr } });
         const blockedServiceIds = blockedSchedules.map((s: any) => s.serviceId); // Might contain nulls
         const isAllBlocked = blockedSchedules.some((s: any) => !s.serviceId); // If any entry has no serviceId, it blocks all
 
-        const whereClause: any = { schoolId };
-        if (serviceId) whereClause.serviceId = serviceId;
+        const whereClause: any = { schoolId: Number(schoolId) };
+        if (serviceId) whereClause.serviceId = Number(serviceId);
 
         // 1. Get Base Slots
         const allSlots = await SchoolSlot.findAll({
@@ -868,28 +888,45 @@ export const getSlotAvailability = async (req: Request, res: Response) => {
             order: [['startTime', 'ASC']]
         });
 
+        console.log(`[getSlotAvailability] Found ${allSlots.length} base slots for school ${schoolId}, service ${serviceId}`);
+
         // Filter slots based on date range and weekdays
         const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][targetDate.getUTCDay()];
+        console.log(`[getSlotAvailability] Target Date: ${dateStr}, Day: ${dayName}`);
 
         const slots = allSlots.filter((slot: any) => {
             // Blocked Check
-            if (isAllBlocked) return false;
-            if (blockedServiceIds.includes(slot.serviceId)) return false;
+            if (isAllBlocked) {
+                console.log(`[getSlotAvailability] Slot ${slot.id} filtered: All blocked`);
+                return false;
+            }
+            if (blockedServiceIds.includes(slot.serviceId)) {
+                console.log(`[getSlotAvailability] Slot ${slot.id} filtered: Service ${slot.serviceId} blocked`);
+                return false;
+            }
 
-            // Check Date Range
-            const slotFromDate = slot.fromDate ? new Date(slot.fromDate) : null;
-            const slotEndDate = slot.endDate ? new Date(slot.endDate) : null;
-
-            if (slotFromDate && slotFromDate > targetDate) return false;
-            if (slotEndDate && slotEndDate < targetDate) return false;
+            // Check Date Range (using string comparison for DATEONLY fields)
+            if (slot.fromDate && slot.fromDate > dateStr) {
+                console.log(`[getSlotAvailability] Slot ${slot.id} filtered: fromDate ${slot.fromDate} > ${dateStr}`);
+                return false;
+            }
+            if (slot.endDate && slot.endDate < dateStr) {
+                console.log(`[getSlotAvailability] Slot ${slot.id} filtered: endDate ${slot.endDate} < ${dateStr}`);
+                return false;
+            }
 
             // Check Weekdays
             if (slot.weekdays && Array.isArray(slot.weekdays) && slot.weekdays.length > 0) {
-                if (!slot.weekdays.includes(dayName)) return false;
+                if (!slot.weekdays.includes(dayName)) {
+                    console.log(`[getSlotAvailability] Slot ${slot.id} filtered: Day ${dayName} not in ${JSON.stringify(slot.weekdays)}`);
+                    return false;
+                }
             }
 
             return true;
         });
+
+        console.log(`[getSlotAvailability] ${slots.length} slots passed filtering`);
 
         // 3. Get Bookings Count
         const startOfDay = new Date(dateStr);
@@ -899,13 +936,13 @@ export const getSlotAvailability = async (req: Request, res: Response) => {
 
         const bookings = await Booking.findAll({
             where: {
-                schoolId,
+                schoolId: Number(schoolId),
                 status: 'booked',
                 date: {
                     [Op.gte]: startOfDay,
                     [Op.lte]: endOfDay
                 },
-                ...(serviceId && { serviceId })
+                ...(serviceId && { serviceId: Number(serviceId) })
             } as any
         });
 
@@ -929,14 +966,14 @@ export const getSlotAvailability = async (req: Request, res: Response) => {
                 priceEntry = allPrices.find(p => p.serviceId === slot.serviceId && p.startTime === slot.startTime && p.endTime === slot.endTime);
             }
 
-            // Fallback 2: Match by global default (serviceId null) and slotName
+            // Fallback 2: Match by global default (serviceId null or undefined) and slotName
             if (!priceEntry) {
-                priceEntry = allPrices.find(p => p.serviceId === null && p.slotName === slot.slotName);
+                priceEntry = allPrices.find(p => (p.serviceId === null || p.serviceId === undefined) && p.slotName === slot.slotName);
             }
 
-            // Fallback 3: Match by global default (serviceId null) and time range
+            // Fallback 3: Match by global default (serviceId null or undefined) and time range
             if (!priceEntry) {
-                priceEntry = allPrices.find(p => p.serviceId === null && p.startTime === slot.startTime && p.endTime === slot.endTime);
+                priceEntry = allPrices.find(p => (p.serviceId === null || p.serviceId === undefined) && p.startTime === slot.startTime && p.endTime === slot.endTime);
             }
 
             return {
@@ -952,6 +989,7 @@ export const getSlotAvailability = async (req: Request, res: Response) => {
 
         res.json(slotMap);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -1067,6 +1105,7 @@ export const getSchoolSlotPrices = async (req: Request, res: Response) => {
         });
         res.json(prices);
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -1108,6 +1147,7 @@ export const updateSchoolSlotPrices = async (req: Request, res: Response) => {
 
         res.json({ message: 'Slot prices updated successfully' });
     } catch (error: any) {
+        console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });
     }
 };
