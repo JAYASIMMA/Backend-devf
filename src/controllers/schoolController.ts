@@ -987,7 +987,16 @@ export const getSlotAvailability = async (req: Request, res: Response) => {
             };
         });
 
-        res.json(slotMap);
+        // Deduplicate slots based on serviceId, startTime, endTime, and slotName
+        const uniqueSlotsMap = new Map<string, any>();
+        slotMap.forEach((s: any) => {
+            const key = `${s.serviceId}-${s.startTime}-${s.endTime}-${s.slotName}`;
+            if (!uniqueSlotsMap.has(key)) {
+                uniqueSlotsMap.set(key, s);
+            }
+        });
+
+        res.json(Array.from(uniqueSlotsMap.values()));
     } catch (error: any) {
         console.error('[getSlotAvailability] CRITICAL ERROR:', error);
         res.status(500).json({ message: error.message });

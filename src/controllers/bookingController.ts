@@ -261,3 +261,27 @@ export const deleteBooking = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Failed to cancel booking' });
     }
 };
+
+export const updateBookingStatus = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status, reason } = req.body;
+
+        const booking = await Booking.findByPk(Number(id));
+        if (!booking) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        booking.status = status;
+        if (reason) {
+            booking.cancellationReason = reason;
+        }
+
+        await booking.save();
+
+        res.status(200).json({ message: 'Booking status updated successfully', booking });
+    } catch (error) {
+        console.error('Failed to update booking status:', error);
+        res.status(500).json({ error: 'Failed to update booking status' });
+    }
+};
